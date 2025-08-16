@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"log"
 	"net/http"
+	"os"
 	"sync"
 )
 
@@ -87,6 +88,14 @@ func main() {
 	http.HandleFunc("/get", getHandler)
 	http.HandleFunc("/delete", deleteHandler)
 
-	fmt.Print("Starting server on port 8080")
-	log.Fatal(http.ListenAndServe(":8080", nil))
+	// Get the port from the environment variable
+	port := os.Getenv("PORT")
+	if port == "" {
+		port = "8080"
+	}
+	addr := ":" + port
+
+	// Start the server
+	fmt.Printf("Starting server on port %s\n", port)
+	log.Fatal(http.ListenAndServe(addr, nil))
 }
