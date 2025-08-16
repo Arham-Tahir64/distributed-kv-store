@@ -1,0 +1,64 @@
+package main
+
+import (
+	"encoding/json"
+	"fmt"
+	"log"
+	"net/http"
+	"sync"
+)
+
+var store = make(map[string]string)
+var mu sync.RWMutex
+
+func putHandler(w http.ResponseWriter, r *http.Request) {
+	key := r.URL.Query().Get("key")
+	value := r.URL.Query().Get("value")
+
+	// Error check if key or value is empty
+	if key == "" || value == "" {
+		http.Error(w, "Key and value are required", http.StatusBadRequest)
+		return
+	}
+
+	// lock the map
+	mu.Lock()
+
+	// Put the key and value in the map
+	store[key] = value
+	mu.Unlock()
+
+	fmt.Fprintf(w, "Stored %s -> %s", key, value)
+}
+
+func getHandler(w http.ResponseWriter, r *http.Request) {
+	key := r.URL.Query().Get("key")
+
+	// error check
+	if key == "" {
+		http.Error(w, "Key is required", http.StatusBadRequest)
+		return
+	}
+
+	// lock the map
+	mu.RLock()
+
+	// Get the value from the map
+	value, ok := store[key]
+	mu.RUnlock()
+
+	if !ok {
+		http.Error(w, "Key not found", http.StatusNotFound)
+		return
+	}
+
+	json.NewEncoder(w).Encode(map[string]string{key: value})
+}
+
+func main() {
+	http.HandleFunc("/put", putHandler)
+	http.HandleFunc("/get", getHandler)
+
+	fmt.Print("Starting server on port 8080")
+	log.Fatal(http.ListenAndServe(":8080", nil))
+}
