@@ -55,9 +55,37 @@ func getHandler(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(map[string]string{key: value})
 }
 
+func deleteHandler(w http.ResponseWriter, r *http.Request) {
+	key := r.URL.Query().Get("key")
+
+	// error check
+	if key == "" {
+		http.Error(w, "Key is required", http.StatusBadRequest)
+		return
+	}
+
+	// lock the map
+	mu.Lock()
+
+	// Check if the key exists in the map
+	_, ok := store[key]
+	if ok {
+		// Delete the key from the map
+		delete(store, key)
+	} else {
+		http.Error(w, "Key not found", http.StatusNotFound)
+		return
+	}
+	mu.Unlock()
+
+	fmt.Fprintf(w, "Deleted %s", key)
+}
+
 func main() {
+	// Register the handlers for the endpoints
 	http.HandleFunc("/put", putHandler)
 	http.HandleFunc("/get", getHandler)
+	http.HandleFunc("/delete", deleteHandler)
 
 	fmt.Print("Starting server on port 8080")
 	log.Fatal(http.ListenAndServe(":8080", nil))
